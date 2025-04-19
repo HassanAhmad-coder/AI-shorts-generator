@@ -1,0 +1,48 @@
+// App.jsx (Main Component)
+import { useState, useRef } from 'react';
+import VideoCanvas from './components/VideoCanvas';
+import AIProcessingPanel from './components/AIProcessingPanel';
+import ExportControls from './components/ExportControls';
+
+function App() {
+  const [videoSrc, setVideoSrc] = useState(null);
+  const [projectData, setProjectData] = useState({
+    clips: [],
+    captions: [],
+    effects: []
+  });
+  const videoRef = useRef(null);
+
+  const handleFileUpload = (file) => {
+    const url = URL.createObjectURL(file);
+    setVideoSrc(url);
+  };
+
+  return (
+    <div className="app-container">
+      <div className="toolbar">
+        <h1>Free AI Video Editor</h1>
+        <input type="file" accept="video/*" onChange={(e) => handleFileUpload(e.target.files[0])} />
+      </div>
+      
+      <div className="editor-container">
+        <VideoCanvas 
+          videoRef={videoRef} 
+          videoSrc={videoSrc} 
+          projectData={projectData}
+        />
+        
+        <AIProcessingPanel 
+          videoRef={videoRef}
+          projectData={projectData}
+          setProjectData={setProjectData}
+        />
+      </div>
+      
+      <ExportControls 
+        projectData={projectData}
+        videoSrc={videoSrc}
+      />
+    </div>
+  );
+}
