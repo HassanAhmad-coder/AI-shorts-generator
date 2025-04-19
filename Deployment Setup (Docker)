@@ -1,0 +1,24 @@
+# Dockerfile
+FROM node:18 as frontend
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+FROM python:3.9 as ai
+WORKDIR /ai
+COPY ai_services/requirements.txt .
+RUN pip install -r requirements.txt
+COPY ai_services .
+
+FROM node:18
+WORKDIR /server
+COPY --from=frontend /app/build ./public
+COPY package*.json ./
+RUN npm install
+COPY server .
+COPY --from=ai /ai ./ai_services
+
+EXPOSE 3000
+CMD ["node", "server.js"]
