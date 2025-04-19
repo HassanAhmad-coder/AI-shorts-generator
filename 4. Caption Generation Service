@@ -1,0 +1,33 @@
+# ai_services/captions.py
+from transformers import pipeline
+import whisper
+import torch
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+class CaptionGenerator:
+    def __init__(self):
+        self.model = whisper.load_model("small").to(device)
+        self.translator = pipeline("translation", model="Helsinki-NLP/opus-mt-en-multilingual")
+    
+    def generate_captions(self, video_path, translate_to=None):
+        # Transcribe audio
+        result = self.model.transcribe(video_path)
+        segments = result["segments"]
+        
+        # Process captions
+        captions = []
+        for seg in segments:
+            text = seg["text"]
+            
+            if translate_to:
+                text = self.translator(text, target_lang=translate_to)[0]["translation_text"]
+            
+            captions.append({
+                "text": text,
+                "start": seg["start"],
+                "end": seg["end"],
+                "original_text": seg["text"]
+            })
+        
+        return captions
