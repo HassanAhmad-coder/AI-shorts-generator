@@ -1,0 +1,44 @@
+// server/wsServer.js
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 8080 });
+
+const projects = new Map();
+
+wss.on('connection', (ws) => {
+  ws.on('message', (message) => {
+    const data = JSON.parse(message);
+    
+    switch (data.type) {
+      case 'join':
+        if (!projects.has(data.projectId)) {
+          projects.set(data.projectId, new Set());
+        }
+        projects.get(data.projectId).add(ws);
+        break;
+        
+      case 'edit':
+        broadcastToProject(data.projectId, message);
+        break;
+    }
+  });
+  
+  ws.on('close', () => {
+    projects.forEach((clients, projectId) => {
+      if (clients.has(ws)) {
+        clients.delete(ws);
+        if (clients.size === 0) {
+          projects.delete(projectId);
+        }
+      }
+    });
+  });
+});
+
+function broadcastToProject(projectId, message) {
+  const clients = projects.get(projectId) || new Set();
+  clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
