@@ -1,0 +1,58 @@
+// server.js (Express API)
+const express = require('express');
+const ffmpeg = require('fluent-ffmpeg');
+const multer = require('multer');
+const { exec } = require('child_process');
+const app = express();
+
+// Configure FFmpeg paths
+ffmpeg.setFfmpegPath('/path/to/ffmpeg');
+
+// File upload handling
+const upload = multer({ dest: 'uploads/' });
+
+// AI Processing Endpoints
+app.post('/api/process/viral-moments', upload.single('video'), (req, res) => {
+  const videoPath = req.file.path;
+  
+  // This would integrate with your AI model
+  detectViralMoments(videoPath)
+    .then(moments => res.json({ moments }))
+    .catch(err => res.status(500).json({ error: err.message }));
+});
+
+// Video Export Endpoint
+app.post('/api/export', upload.single('video'), (req, res) => {
+  const { clips, effects } = req.body;
+  const outputPath = `exports/${Date.now()}.mp4`;
+  
+  let command = ffmpeg(req.file.path);
+  
+  // Apply clips and effects
+  clips.forEach(clip => {
+    command.seekInput(clip.start).duration(clip.end - clip.start);
+  });
+  
+  // Add watermark and processing
+  command.videoFilters([
+    'scale=w=1080:h=1920:force_original_aspect_ratio=1',
+    'pad=1080:1920:(ow-iw)/2:(oh-ih)/2'
+  ])
+  .output(outputPath)
+  .on('end', () => res.download(outputPath))
+  .on('error', err => res.status(500).json({ error: err.message }))
+  .run();
+});
+
+// AI Service Integration
+async function detectViralMoments(videoPath) {
+  // This would call your Python AI service
+  return new Promise((resolve) => {
+    exec(`python ai_services/viral_moments.py ${videoPath}`, (error, stdout) => {
+      if (error) throw error;
+      resolve(JSON.parse(stdout));
+    });
+  });
+}
+
+app.listen(3000, () => console.log('Server running on port 3000'));
